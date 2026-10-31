@@ -5,11 +5,13 @@ import {
   Args,
   ResolveField,
   Parent,
+  ID,
 } from '@nestjs/graphql';
 import { ExpenseUserService } from './expense-user.service';
 import { ExpenseUser } from './expense-user.entity';
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
+import { CreateExpenseUserDto } from './dto/create-expense-user.dto';
 
 @Resolver(() => ExpenseUser)
 export class ExpenseUserResolver {
@@ -24,18 +26,22 @@ export class ExpenseUserResolver {
   }
 
   @Query(() => ExpenseUser)
-  async expenseUser(@Args('id') id: number): Promise<ExpenseUser> {
-    return await this.expenseUserService.findOne(id);
+  async expenseUser(
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<ExpenseUser> {
+    return this.expenseUserService.findOne(id);
   }
 
   @Mutation(() => ExpenseUser)
   async createExpenseUser(
-    @Args('input') input: ExpenseUser,
+    @Args('expenseId') expenseId: string,
+    @Args('userId') userId: string,
   ): Promise<ExpenseUser> {
+    const input: CreateExpenseUserDto = { expenseId, userId };
     return this.expenseUserService.create(input);
   }
 
-  @ResolveField(() => User)
+  @ResolveField(() => User, { nullable: true })
   async participant(@Parent() expenseUser: ExpenseUser): Promise<User> {
     const { userId } = expenseUser;
     return this.userService.findOne(userId);

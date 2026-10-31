@@ -1,17 +1,38 @@
-import { Expense } from 'src/expenses/expense.entity';
-import { User } from 'src/user/user.entity';
-import { Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  Column,
+  JoinColumn,
+} from 'typeorm';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { Expense } from '../expenses/expense.entity';
+import { User } from '../user/user.entity';
 
+@ObjectType()
 @Entity()
 export class ExpenseUser {
+  @Field(() => ID)
   @PrimaryGeneratedColumn('uuid')
-  id: number;
+  id: string;
 
-  @ManyToOne(() => Expense, (expense) => expense.sharedBy, {
-    onDelete: 'CASCADE',
-  })
+  @Field()
+  @Column()
   expenseId: string;
 
-  @ManyToOne(() => User, (user) => user.expenses, { onDelete: 'CASCADE' })
+  @Field()
+  @Column()
   userId: string;
+
+  @ManyToOne(() => Expense, (expense) => expense.expenseUsers, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'expenseId' })
+  expense?: Expense;
+
+  @ManyToOne(() => User, (user) => user.expenseUsers, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'userId' })
+  user?: User;
 }

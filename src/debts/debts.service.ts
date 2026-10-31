@@ -5,7 +5,10 @@ import { UpdateDebtDto } from './dto/update-debt.dto';
 @Injectable()
 export class DebtsService {
   create(createDebtDto: CreateDebtDto) {
-    return 'This action adds a new debt';
+    return {
+      message: 'This action adds a new debt',
+      debt: createDebtDto,
+    };
   }
 
   findAll() {
@@ -17,7 +20,10 @@ export class DebtsService {
   }
 
   update(id: number, updateDebtDto: UpdateDebtDto) {
-    return `This action updates a #${id} debt`;
+    return {
+      message: `This action updates a #${id} debt`,
+      update: updateDebtDto,
+    };
   }
 
   remove(id: number) {
