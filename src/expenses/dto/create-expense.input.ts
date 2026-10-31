@@ -1,32 +1,46 @@
-import { InputType, Field, ID } from '@nestjs/graphql';
-import { User } from 'src/user/user.entity';
+import { InputType, Field, Float } from '@nestjs/graphql';
+import {
+  IsNotEmpty,
+  IsString,
+  IsNumber,
+  IsPositive,
+  IsArray,
+} from 'class-validator';
 
 @InputType()
 export class CreateExpenseInput {
   @Field()
-  id: string;
-
-  @Field()
+  @IsString()
+  @IsNotEmpty()
   title: string;
 
   @Field()
+  @IsString()
+  @IsNotEmpty()
   date: string;
 
-  @Field()
+  @Field(() => Float)
+  @IsNumber()
+  @IsPositive()
   cost: number;
 
-  @Field()
+  @Field(() => Float)
+  @IsNumber()
+  @IsPositive()
   originalCost: number;
 
   @Field()
+  @IsString()
+  @IsNotEmpty()
   paidBy: string;
 
   @Field()
+  @IsString()
+  @IsNotEmpty()
   typeId: string;
 
-  @Field(() => [ID])
+  @Field(() => [String], { defaultValue: [] })
+  @IsArray()
+  @IsString({ each: true })
   sharedBy: string[];
-
-  @Field(() => [ID])
-  settleBy: User[];
 }

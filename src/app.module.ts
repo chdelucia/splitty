@@ -1,48 +1,59 @@
-/* eslint-disable prettier/prettier */
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Logger } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ExpenseModule } from './expenses/expense.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Expense } from './expenses/expense.entity';
-import { Connection } from 'typeorm';
-import { User } from './user/user.entity';
 import { UserModule } from './user/user.module';
 import { ExpenseUserModule } from './expense-user/expense-user.module';
 import { DebtsModule } from './debts/debts.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '.env.local'],
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: (configService.get<string>('DB_TYPE', 'mysql') as any) || 'mysql',
+        host: configService.get<string>('DB_HOST', 'localhost'),
+        port: configService.get<number>('DB_PORT', 3306),
+        username: configService.get<string>('DB_USERNAME', 'root'),
+        password: configService.get<string>('DB_PASSWORD', ''),
+        database: configService.get<string>('DB_NAME', 'splitty'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize:
+          configService.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
+        autoLoadEntities: true,
+      }),
+    }),
     ExpenseModule,
     UserModule,
     ExpenseUserModule,
-    TypeOrmModule.forRoot({
-      type: "mysql",
-      host: "localhost",
-      port: 3306,
-      username: "root",
-      password: "",
-      database: "splitty",
-      entities: ["dist/**/*.entity{.ts,.js}"],
-      synchronize: true,
-      autoLoadEntities: true
-    }),
-    TypeOrmModule.forFeature([Expense, User]),
     DebtsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {
-  constructor(private connection: Connection) {}
+export class AppModule implements OnModuleInit {
+  private readonly logger = new Logger(AppModule.name);
+
+  constructor(private readonly dataSource: DataSource) {}
+
   async onModuleInit() {
     try {
-      const queryRunner = this.connection.createQueryRunner();
-      await queryRunner.connect();
-      console.log('Connected to the database successfully.');
-      await queryRunner.release();
+      if (this.dataSource.isInitialized) {
+        this.logger.log('Connected to the database successfully.');
+      } else {
+        await this.dataSource.initialize();
+        this.logger.log('Connected to the database successfully.');
+      }
     } catch (error) {
-      console.log('Failed to connect to the database:', error);
+      this.logger.error('Failed to connect to the database:', error);
     }
   }
 }

@@ -6,12 +6,17 @@ import {
   Delete,
   Body,
   Param,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ExpenseUser } from 'src/expense-user/expense-user.entity';
-import { ExpenseUserService } from 'src/expense-user/expense-user.service';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ExpenseUserService } from '../expense-user/expense-user.service';
 import { Expense } from './expense.entity';
 import { ExpenseService } from './expense.service';
+import { CreateExpenseDto, UpdateExpenseDto } from './dto/create-expense.dto';
 
+@ApiTags('expenses')
 @Controller('expenses')
 export class ExpenseController {
   constructor(
@@ -20,36 +25,74 @@ export class ExpenseController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get all expenses' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return all expenses',
+    type: [Expense],
+  })
   async findAll(): Promise<Expense[]> {
     return this.expenseService.findAll();
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<Expense> {
+  @ApiOperation({ summary: 'Get an expense by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return expense details',
+    type: Expense,
+  })
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Expense> {
     return this.expenseService.findOne(id);
   }
 
   @Post()
-  async create(@Body() expense: Expense): Promise<Expense> {
-    const createdExpense = await this.expenseService.create(expense);
-    await this.expenseUserService.createExpenseUsers(
-      expense.id,
-      expense.sharedBy,
-    );
-
-    return createdExpense;
+  @ApiOperation({ summary: 'Create a new expense' })
+  @ApiResponse({
+    status: 201,
+    description: 'The expense has been successfully created',
+    type: Expense,
+  })
+  async create(@Body() createExpenseDto: CreateExpenseDto): Promise<Expense> {
+    const createdExpense = await this.expenseService.create(createExpenseDto);
+    if (createExpenseDto.sharedBy && createExpenseDto.sharedBy.length > 0) {
+      await this.expenseUserService.createExpenseUsers(
+        createdExpense.id,
+        createExpenseDto.sharedBy,
+      );
+    }
+    return this.expenseService.findOne(createdExpense.id);
   }
 
   @Put(':id')
+  @ApiOperation({ summary: 'Update an existing expense' })
+  @ApiResponse({
+    status: 200,
+    description: 'The expense has been successfully updated',
+    type: Expense,
+  })
   async update(
-    @Param('id') id: string,
-    @Body() expense: Expense,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateExpenseDto: UpdateExpenseDto,
   ): Promise<Expense> {
-    return this.expenseService.update(id, expense);
+    const updated = await this.expenseService.update(id, updateExpenseDto);
+    if (updateExpenseDto.sharedBy && updateExpenseDto.sharedBy.length > 0) {
+      await this.expenseUserService.createExpenseUsers(
+        id,
+        updateExpenseDto.sharedBy,
+      );
+    }
+    return updated;
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<void> {
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete an expense' })
+  @ApiResponse({
+    status: 204,
+    description: 'The expense has been successfully deleted',
+  })
+  async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.expenseService.delete(id);
   }
 }
